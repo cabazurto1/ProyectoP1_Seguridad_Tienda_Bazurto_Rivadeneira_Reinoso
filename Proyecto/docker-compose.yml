@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # PostgreSQL principal (base de datos)
+  postgres_primary:
+    image: postgres:12
+    container_name: postgres_primary
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: primary_password
+      POSTGRES_DB: primary_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/primary/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
+  # Microservicio de productos
+  productos_service:
+    build:
+      context: ./productos
+    container_name: productos_service
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres_primary
+    entrypoint: /bin/bash -c "until nc -z -v -w30 postgres_primary 5432; do echo 'Waiting for database...'; sleep 5; done; npm start"
+    environment:
+      - DATABASE_URL=postgres://postgres:primary_password@postgres_primary:5432/primary_db
+
+  # Microservicio de carrito
+  carrito_service:
+    build:
+      context: ./carrito
+    container_name: carrito_service
+    ports:
+      - "3002:3002"
+    depends_on:
+      - postgres_primary
+    entrypoint: /bin/bash -c "until nc -z -v -w30 postgres_primary 5432; do echo 'Waiting for database...'; sleep 5; done; npm start"
+    environment:
+      - DATABASE_URL=postgres://postgres:primary_password@postgres_primary:5432/primary_db
+
+  # Microservicio de pedidos
+  pedidos_service:
+    build:
+      context: ./pedidos
+    container_name: pedidos_service
+    ports:
+      - "3003:3003"
+    depends_on:
+      - postgres_primary
+    entrypoint: /bin/bash -c "until nc -z -v -w30 postgres_primary 5432; do echo 'Waiting for database...'; sleep 5; done; npm start"
+    environment:
+      - DATABASE_URL=postgres://postgres:primary_password@postgres_primary:5432/primary_db
+
+  # Microservicio de usuarios
+  usuarios_service:
+    build:
+      context: ./usuarios
+    container_name: usuarios_service
+    ports:
+      - "3004:3004"
+    depends_on:
+      - postgres_primary
+    entrypoint: /bin/bash -c "until nc -z -v -w30 postgres_primary 5432; do echo 'Waiting for database...'; sleep 5; done; npm start"
+    environment:
+      - DATABASE_URL=postgres://postgres:primary_password@postgres_primary:5432/primary_db
+
+  # Microservicio de envíos
+  envios_service:
+    build:
+      context: ./envios
+    container_name: envios_service
+    ports:
+      - "3005:3005"
+    depends_on:
+      - postgres_primary
+    entrypoint: /bin/bash -c "until nc -z -v -w30 postgres_primary 5432; do echo 'Waiting for database...'; sleep 5; done; npm start"
+    environment:
+      - DATABASE_URL=postgres://postgres:primary_password@postgres_primary:5432/primary_db
+
+  # NGINX como API Gateway
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - productos_service
+      - carrito_service
+      - pedidos_service
+      - usuarios_service
+      - envios_service
+    restart: always

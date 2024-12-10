@@ -1,0 +1,14 @@
+{
+    "name": "envios_service",
+    "version": "1.0.0",
+    "description": "Microservicio para manejar los envíos",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js"
+    },
+    "dependencies": {
+      "express": "^4.17.1",
+      "pg": "^8.7.1"
+    }
+  }
+  
